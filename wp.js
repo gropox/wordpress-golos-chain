@@ -7,13 +7,25 @@
 //│ │ │ │ │ 
 //│ │ │ │ │ 
 
-const golos = require('steem')
+const ga = require("golos-addons");
+
+const global = ga.global;
+const steem = require("steem");
+
+global.initApp("wordpress");
+
+const log = global.getLogger("wp");
+
 const WP = require('wordpress-rest-api');
+
+const CONFIG = global.CONFIG;
+
+
 
 // НАСТРОЙКИ
 // Ниже необходимо указать путь до вашего wp-json директивы вашего WORDPRESS 
 const wp = new WP({
-  endpoint: 'http://forklog.com/wp-json'
+    endpoint: CONFIG.wp_endpoint
 });
 
 
@@ -21,26 +33,26 @@ const wp = new WP({
 // Указано link - ссылка. Если хотите опубликовать запись с отказом от выплаты - выбирайте в WP указанный ниже формат
 // Если вы ошиблись при размещении поста - вы можете оперативно отредактировать его в вп с другим форматом -
 // Это изменить формат и на голосе. 
-const wpFormatForNoReward = 'link'
+const wpFormatForNoReward = CONFIG.wpFormatForNoReward;
 
 // Стандартные форматы в WP: standard,aside,link,quote,image,video,gallery,status,video,audio,chat
 // https://codex.wordpress.org/Post_Formats
- 
+
 
 // Формат WP записи которая опубликует пост в режиме "100% в силе голоса"
-const wpFormatForAllInpower = 'aside'
+const wpFormatForAllInpower = CONFIG.wpFormatForAllInpower;
 
 
 
 // Укажите s postLimit сколько последних постов проверять на wordpress блоге. 
 // Разунмно комбинируйте это со значением globalInterval - не указывайте слишком большее количество постов при слишком коротком интервале
 // Если блог-донор обновляется редко - указывайте неблольшой значение.
-const postLimit = 1
+const postLimit = CONFIG.postLimit;
 
 // ИНТЕРВАЛ РАЗМЕЩЕНИЯ ПОСТОВ
 // Используйте разумно из расчета расписания указанного вами в CRON, а так же помните, что мимнимальный интервал
 // должен стоять мимним 5 минут - голос не разрешает размещать посты чаще. 
-const postInterval = 1000*60*5 
+const postInterval = CONFIG.postInterval;
 
 
 // ПОДКЛЮЧЕНИЕ К GOLOS
@@ -52,289 +64,259 @@ const postInterval = 1000*60*5
 
 // golos.config.set('websocket','ws://localhost:9090');
 
-golos.config.set('websocket', 'wss://ws.golos.io');
-
-// Параметры ниже так же указывают на то, что работать вы будете с блокчейном голоса. Если убрать эти две строки
-// И поменять адрес ноды - вы сможете использовать STEEMIT или другие блокчейны на его базе!
-golos.config.set('address_prefix', 'GLS');
-golos.config.set('chain_id', '782a3039b478c839e4cb0c941ff4eaeb7df40bdd68bd441afd444b9da763de12');
-
-const author = {}
-const t = 1000
+steem.api.setOptions({ url: "https://api.steemit.com" })
 
 // Некоторые строки,такие как теги, категории, ссылки в wordpress могут быть на русском, но поскольку golos.io не понимает кириллические теги
 // Ниже создадим функцию, которая будет транслитировать кириллицу в латиницу.
 // Напротив каждой кириллической буквы мы поместим ее латиницкий аналог в формате голоса:	
 const cyrTag = () => {
-	// Таблицв транслитирации в том виде, в котором она принята на golos.io
-  const _associations = {
-    "а": "a",
-    "б": "b",
-    "в": "v",
-    "ґ": "g",
-    "г": "g",
-    "д": "d",
-    "е": "e",
-    "ё": "yo",
-    "є": "ye",
-    "ж": "zh",
-    "з": "z",
-    "и": "i",
-    "і": "i",
-    "ї": "yi",
-    "й": "ij",
-    "к": "k",
-    "л": "l",
-    "м": "m",
-    "н": "n",
-    "о": "o",
-    "п": "p",
-    "р": "r",
-    "с": "s",
-    "т": "t",
-    "у": "u",
-    "ф": "f",
-    "x": "kh",
-    "ц": "cz",
-    "ч": "ch",
-    "ш": "sh",
-    "щ": "shch",
-    "ъ": "xx",
-    "ы": "y",
-    "ь": "x",
-    "э": "ye",
-    "ю": "yu",
-    "я": "ya",
-    "ґ": "g",
-    "і": "i",
-    "є": "e",
-    "ї": "i"
-  };
+    // Таблица транслитирации в том виде, в котором она принята на golos.io
+    const _associations = {
+        "а": "a",
+        "б": "b",
+        "в": "v",
+        "ґ": "g",
+        "г": "g",
+        "д": "d",
+        "е": "e",
+        "ё": "yo",
+        "є": "ye",
+        "ж": "zh",
+        "з": "z",
+        "и": "i",
+        "і": "i",
+        "ї": "yi",
+        "й": "ij",
+        "к": "k",
+        "л": "l",
+        "м": "m",
+        "н": "n",
+        "о": "o",
+        "п": "p",
+        "р": "r",
+        "с": "s",
+        "т": "t",
+        "у": "u",
+        "ф": "f",
+        "x": "kh",
+        "ц": "cz",
+        "ч": "ch",
+        "ш": "sh",
+        "щ": "shch",
+        "ъ": "xx",
+        "ы": "y",
+        "ь": "x",
+        "э": "ye",
+        "ю": "yu",
+        "я": "ya",
+        "ґ": "g",
+        "і": "i",
+        "є": "e",
+        "ї": "i"
+    };
 
-  return {
-    transform: transform
-  }
-
-  function transform(str, spaceReplacement) {
-    if (!str) {
-      return "";
+    return {
+        transform: transform
     }
-    let new_str = '';
-    let ru = ''
-    for (let i = 0; i < str.length; i++) {
-      let strLowerCase = str[i].toLowerCase();
 
-      if (strLowerCase === " " && spaceReplacement) {
-        new_str += spaceReplacement;
+    function transform(str, spaceReplacement) {
+        if (!str) {
+            return "";
+        }
+        let new_str = '';
+        let ru = ''
+        for (let i = 0; i < str.length; i++) {
+            let strLowerCase = str[i].toLowerCase();
 
-        continue;
-      }
+            if (strLowerCase === " " && spaceReplacement) {
+                new_str += spaceReplacement;
 
-      if (!_associations[strLowerCase]) {
-        new_str += strLowerCase;
-      } else {
-        new_str += _associations[strLowerCase];
-		// Если в теге найдены русские символы - стало быть нам нужно добавить префикс ru-- для публикации на голосе
-        ru = 'ru--';
-      }
+                continue;
+            }
+
+            if (!_associations[strLowerCase]) {
+                new_str += strLowerCase;
+            } else {
+                new_str += _associations[strLowerCase];
+                // Если в теге найдены русские символы - стало быть нам нужно добавить префикс ru-- для публикации на голосе
+                ru = 'ru--';
+            }
+        }
+        return ru + new_str;
     }
-    return ru + new_str;
-  }
 };
 
 // Теперь мы сможем транслитировать теги подобным образом: cyrTag().transform('Тег на русском', "-")) 
 
+async function getPosts() {
+    return new Promise((resolve) => {
+        wp.posts()
+            .perPage(postLimit)
+            .embed()
+            .get(function (err, posts) {
+                if (err) {
+                    console.log('Ошибка wordpress', err)
+                    throw err;
+                }
 
+                const g = []
+                for (let post of posts) {
+                    log.debug("found post", post.title['rendered']);
+                    g.push({
+                        title: post.title['rendered'],
+                        content: post.content['rendered'],
+                        permlink: post.slug, // Если на вашем WP русские permlink воспользуйтесь транслитирацией: cyrTag().transform(post.slug,"-")
+                        status: post.status,
+                        update: post.modified_gmt,
+                        time: post.date_gmt,
+                        tags: post._embedded['wp:term'][1],
+                        topic: post._embedded['wp:term'][0][0].name,
+                        author: post._embedded['author'][0].slug,
+                        thumb: (typeof post._embedded['wp:featuredmedia'] === 'undefined') ? '' : post._embedded['wp:featuredmedia'][0].source_url,
+                        embedded: post._embedded,
+                        format: post.format
+                    })
+                }
 
-wp.posts()
-  .perPage(postLimit)
-  .embed()
-  .get(function (err, posts) {
-    if (err) {
-      console.log('Ошибка wordpress', err)
+                resolve(g);
+            });
+    });
+}
+
+const t = 1000;
+
+async function doPost(post) {
+    const tags = [];
+
+    for (let tag of post.tags) {
+        tags.push(cyrTag().transform(tag['name'], '-'))
     }
-   
 
-    const g = []
-    for (let post of posts) {
-      g.push({
-        title: post.title['rendered'],
-        content: post.content['rendered'],
-        permlink: post.slug, // Если на вашем WP русские permlink воспользуйтесь транслитирацией: cyrTag().transform(post.slug,"-")
-        status: post.status,
-        update: post.modified_gmt,
-        time: post.date_gmt,
-        tags: post._embedded['wp:term'][1],
-        topic: post._embedded['wp:term'][0][0].name,
-        author: post._embedded['author'][0].slug,
-        thumb: (typeof post._embedded['wp:featuredmedia'] === 'undefined') ? '' : post._embedded['wp:featuredmedia'][0].source_url,
-        embedded: post._embedded,
-        format: post.format
-      })
+    const topic = cyrTag().transform(post.topic, '-')
+    const author = CONFIG.authors[post.author];
+
+    if (!author) {
+        log.warn("неизвестный автор", post.author);
+        return;
     }
 
-    console.log(`Начало работы...`)
-    const summ = g.length
-    let n = 0
+    // Нужно проверить блог автора на golos.io на предмет наличия поста c такой же ссылкой и если такой пост уже есть:
+    // Проверим нуждается он в обновлении или нет. Если на golos актуальная версия поста - пропустим этот и перейдем к следующему посту
+    const permlink = post.permlink
 
-    let posting = () => {
-      //console.log(g[n].tags)
-      const terms = []
-      const wptags = g[n].tags
-      for (let tag of wptags) {
-        terms.push(cyrTag().transform(tag['name'], '-'))
-      }
-      const topic = cyrTag().transform(g[n].topic, '-')
-      const tags = terms
+    log.info("обрабатываем пост", author.login, permlink);
 
-      switch (g[n].author) {
-			// Задайте условия для авторов
-			// В case укажите логины авторов вашего WP, а внутри условия case сообщите, 
-			// Какой автор на GOLOS будет связан с автором на WP
-			// author.login = логин на голосе без символа @
-			// author.wif   = Приватный постинг ключ 
-			
-			// Рекомендуется вместо прописания ключей использовать переменные process.env
-      case "bukowski":
-        author.login = 'bukowski'
-        author.wif = '5.........'
-        break;
+    let content = await steem.api.getContentAsync(author.login, permlink);
+    if (content.permlink != permlink) {
+        content = null;
+    }
 
-      case "harms":
-        author.login = 'harms'
-        author.wif = '5.........'
-        break;
-
-      case "orwell":
-        author.login = 'orwell'
-        author.wif = '5.........'
-        break;
-
-     
-		
-		// Если вам нужно больше авторов - просто добавьте еще конструкций:
-		
-		// case "jhondoe":
-        // author.login = 'jhondoe'
-        // author.wif = '5.........'
-        // break;
-		
-		
-		
-		// Дефолнтный автор - если ни один из вариантов выше не подходит
-      default:
-        author.login = ''
-        author.wif = ''
-
-      }
-
-      // Нужно проверить блог автора на golos.io на предмет наличия поста c такой же ссылкой и если такой пост уже есть:
-      // Проверим нуждается он в обновлении или нет. Если на golos актуальная версия поста - пропустим этот и перейдем к следующему посту
-		const permlink = g[n].permlink
-		
-				
-				
-      golos.api.getContent(author.login, permlink, function (err, result) {
-        if(err){
-				console.log('Ошибка: ', err);	
-				}
-				
-     
-		
-		// isNew = true если поста с такой ссылкой в блоге на golos.io не было ранее. 
-        const isNew = result.permlink === ''
-        
-		// Проверяем когда было последнее обновление этого поста на голосе
-        const golosTime = Date.parse(result.last_update) / t
+    let isNew = false;
+    let isUpdate = false;
+    if (content) {
+        // Проверяем когда было последнее обновление этого поста на голосе
+        const golosTime = Date.parse(content.last_update) / t
 
         // Проверяем когда было последние обновление поста на WP
-        const wpTime = Date.parse(g[n].update) / t
+        const wpTime = Date.parse(post.update) / t
 
         // isUpdate = true если пост с такой ссылкой существует, но версия на WP свежее
-        const isUpdate = result.permlink === g[n].permlink && golosTime < wpTime
-        	 
+        const isUpdate = content.permlink === post.permlink && golosTime < wpTime
+    } else {
+        isNew = true;
+    }
+    log.debug("isNew", isNew, "isUpdate", isUpdate);
 
-        // Осуществляем постинг в голос если такого поста не было ИЛИ если на WP свежая редакция поста - заменим ею старый пост на golos
-        if (isNew || isUpdate) {
-			console.log(`Публикация ${n +1} из ${summ}>>> ${g[n].title}`)
+    // Осуществляем постинг в голос если такого поста не было ИЛИ если на WP свежая редакция поста - заменим ею старый пост на golos
+    if (isNew || isUpdate) {
+        log.info("Публикация")
 
-          //  0.000 GBG для отказа. 
-          const maxAcceptedPayout = (g[n].format === wpFormatForNoReward) ? '0.000 GBG' : '1000000.000 GBG';
+        //  0.000 GBG для отказа. 
+        const maxAcceptedPayout = (post.format === wpFormatForNoReward) ? '0.000 SBD' : '1000000.000 SBD';
+        // 10000 для 50%/50% или 0 для 100% в СГ
+        const percentSteemDollars = (post.format === wpFormatForAllInpower) ? 0 : 10000;
 
-          // 10000 для 50%/50% или 0 для 100% в СГ
-          const percentSteemDollars = (g[n].format === wpFormatForAllInpower) ? 0 : 10000;
-
-          
-
-          // В этот массив мы запишем теги, превью, название приложения и формат данных. 
-          const jsonMetadata = {
+        // В этот массив мы запишем теги, превью, название приложения и формат данных. 
+        const jsonMetadata = {
             "tags": tags,
             "image": [
-              g[n].thumb
+                post.thumb
             ],
-			// Как хороший тон - ккажем наименование нашего приложения, оно будет отображаться в json metadata
-            "app": "Wordpress importer (vik)",
+            // Как хороший тон - ккажем наименование нашего приложения, оно будет отображаться в json metadata
+            "app": "Wordpress importer (vik,ropox's version)",
             "format": "html"
-          }
-			
-		  
-		 
-		  // Размещение поста
-        golos.broadcast.comment(
-			// Передача параметров 
-            author.wif, '', topic, author.login, permlink, g[n].title, g[n].content, jsonMetadata,
-			
-            function (err, result) {
-             
-
-				if(err){
-				console.log('Ошибка: ',err);	
-				}
-				
-              // Установка параметров выплат для поста, отправляем с небольшой отсрочкой во избежание ошибок
-             if (!isUpdate) {
-			 setTimeout(() => {
-                golos.broadcast.commentOptions(
-                  author.wif, author.login, permlink, maxAcceptedPayout, percentSteemDollars, true, true, [],
-                  function (err, result) {
-                   if(err){
-					console.log('Ошибка: ',err);	
-					}
-                  });
-
-              }, 1000);
-				}
-
-            });
-			
-
         }
 
         if (isUpdate) {
-          console.log(`Обновление поста: ${g[n].title}`)
+            log.info("Обновление поста:", post.title)
+        } else {
+            log.info("Создание поста", post.title);
         }
 
-        // Перебираем все посты добавляя с каждым разом +1 переменной n  
-        n++
-
-        // Когда n станет равна summ сумме полученных постов - остановим процесс интервала публикации постов
-        if (n === summ) {
-		  
-          clearInterval(posting)
-          console.log(`========== Постинг окончен ===========`)
-		  
-		  // Закрываем скрипт полностью и ждем когда его запустит по расписанию CRON
-		  setTimeout(() => {
-			  
-		  process.exit()
-		  },6000);
+        if (global.broadcast) {
+            // Размещение поста
+            await steem.broadcast.commentAsync(
+                author.wif,
+                '',
+                topic,
+                author.login,
+                permlink,
+                post.title,
+                post.content,
+                jsonMetadata);
+        } else {
+            log.info("no broadcast, no post",
+                '',
+                topic,
+                author.login,
+                permlink,
+                post.title,
+                post.content,
+                jsonMetadata);
         }
 
-      });
-	// Интервал с которым будут публиковаться посты 
+        // Установка параметров выплат для поста, отправляем с небольшой отсрочкой во избежание ошибок
+        if (!isUpdate) {
+            if (global.broadcast) {
+                await steem.broadcast.commentOptionsAsync(
+                    author.wif,
+                    author.login,
+                    permlink,
+                    maxAcceptedPayout,
+                    percentSteemDollars,
+                    true,
+                    true,
+                    []);
+            } else {
+                log.info("no broadcast, no comment options",
+                    author.login,
+                    permlink,
+                    maxAcceptedPayout,
+                    percentSteemDollars            
+                );
+            }
+        }
     }
-	
-posting()
-setInterval(posting, postInterval);
+}
 
-  });
+async function run() {
+
+    while (true) {
+        try {
+            const posts = await getPosts();
+
+            log.info("Начало работы, постов в очереди", posts.length);
+            log.debug(posts);
+
+            for (let p of posts) {
+                await doPost(p);
+            }
+        } catch (e) {
+            console.log("error in main loop", e);
+        }
+        await global.sleep(postInterval);
+    }
+}
+
+
+run();
