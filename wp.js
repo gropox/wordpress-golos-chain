@@ -312,7 +312,7 @@ async function run() {
     } catch (e) {
         console.log("error in main loop", e);
     }
-    await global.sleep(postInterval);
+    process.exit(0)
 }
 
 
