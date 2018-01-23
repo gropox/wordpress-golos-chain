@@ -300,22 +300,19 @@ async function doPost(post) {
 }
 
 async function run() {
+    try {
+        const posts = await getPosts();
 
-    while (true) {
-        try {
-            const posts = await getPosts();
+        log.info("Начало работы, постов в очереди", posts.length);
+        log.debug(posts);
 
-            log.info("Начало работы, постов в очереди", posts.length);
-            log.debug(posts);
-
-            for (let p of posts) {
-                await doPost(p);
-            }
-        } catch (e) {
-            console.log("error in main loop", e);
+        for (let p of posts) {
+            await doPost(p);
         }
-        await global.sleep(postInterval);
+    } catch (e) {
+        console.log("error in main loop", e);
     }
+    await global.sleep(postInterval);
 }
 
 
