@@ -221,7 +221,7 @@ async function doPost(post) {
         const wpTime = Date.parse(post.update) / t
 
         // isUpdate = true если пост с такой ссылкой существует, но версия на WP свежее
-        const isUpdate = content.permlink === post.permlink && golosTime < wpTime
+        isUpdate = (golosTime < wpTime);
     } else {
         isNew = true;
     }
